@@ -1,20 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 
 from collections import deque
 from itertools import islice
-from itertools import izip
 from itertools import tee
 
+try:
+    from itertools import izip as zip
+except ImportError:
+    pass
 
 
 # CONSUMER
-def consume(iterator, n):
+def consume(iterable, n=None):
     """
     Advance the iterator n-steps ahead. If n is none, consume entirely.
     From: https://docs.python.org/2/library/itertools.html#recipes
+    Returns: iterator
     """
+    iterator = iter(iterable)
     # Use functions that consume iterators at C speed.
     if n is None:
         # feed the entire iterator into a zero-length deque
@@ -26,9 +31,13 @@ def consume(iterator, n):
 
 
 
-def consume3(iterator, n):
-    '''Advance the iterator n-steps ahead. If n is none, consume entirely.'''
-    deque(islice(iterator, n), maxlen=0)
+def consume3(iterable, n=None):
+    '''
+    Advance the iterator n-steps ahead. If n is none, consume entirely.
+    Returns: iterator
+    '''
+    iterator = iter(iterable)
+    deque(islice(iter(iterator), n), maxlen=0)
     return iterator
 
 
@@ -39,25 +48,25 @@ def ngram(iterable, n=2):
     assert n > 0, 'Cannot create negative n-grams.'
     l = tee(iterable, n)
     for i, s in enumerate(l):
-        for _ in xrange(i):
+        for _ in range(i):
             next(s, None)
-    return izip(*l)
+    return zip(*l)
 
 
 
 def ngram_consume(iterable, n=2):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     assert n > 0, 'Cannot create negative n-grams.'
-    #return izip(*[consume(s, i) for i, s in enumerate(tee(iterable, n))])
+    #return zip(*[consume(s, i) for i, s in enumerate(tee(iterable, n))])
     context = [consume(s, i) for i, s in enumerate(tee(iterable, n))]
-    return izip(*context)
+    return zip(*context)
 
 
 
-def ngram_for(words, n=2):
+def ngram_generator(words, n=2):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     assert n > 0, "n is not in (0,inf)"
-    for i in xrange(len(words)-n+1):
+    for i in range(len(words)-n+1):
         yield tuple(words[i:i+n])
 
 
@@ -67,7 +76,7 @@ def cbow(iterable, window=1):
     context = [consume(s, i) for i, s in enumerate(tee(iterable, 2*window+1))]
     target = context[window]
     del context[window]
-    return izip(izip(*context), target)
+    return zip(zip(*context), target)
 
 
 
@@ -76,19 +85,19 @@ def cbow_a(iterable, window=1):
     context = [consume3(s, i) for i, s in enumerate(tee(iterable, 2*window+1))]
     target = context[window]
     del context[window]
-    return izip(izip(*context), target)
+    return zip(zip(*context), target)
 
 
 
-def cbow2(iterable, window=2):
+def cbow2(iterable, window=1):
    "s -> ((s0,s2), s1), ((s1,s3), s2), ((s2, s4), s3), ..."
    context = list(tee(iterable, 2*window+1))
    for i, s in enumerate(context):
-      for _ in xrange(i):
+      for _ in range(i):
          next(s, None)
    target = context[window]
    del context[window]
-   return izip(izip(*context), target)
+   return zip(zip(*context), target)
 
 
 
@@ -116,51 +125,103 @@ def cbow_from_ngram_iterator(ngrams):
 
 
 
-def test():
-   import timeit
-   number = 30000
-   def helper(method_name, number = 30000):
-      return (method_name,
-         timeit.timeit('for n in {}(text):\n pass'.format(method_name),
-                       setup="from __main__ import {}, text".format(method_name),
-                       number=number),
-         timeit.timeit('[n for n in {}(text)]'.format(method_name),
-                       setup="from __main__ import {}, text".format(method_name),
-                       number=number))
+def make_word_iterator(a):
+    """
+    Handles been given a string or a file name.
+    """
+    try:
+        with open(a, 'r') as f:
+            for l in f:
+                yield l
+    except:
+        yield a
 
 
-   # python -mtimeit  --setup="from cbow import ngram, text" "[n for n in ngram(text)]"
-   results = [helper(m, number) for m in ('ngram', 'ngram_consume', 'cbow', 'cbow_a', 'cbow2', 'cbow_with_ngram')]
-   results.append(('cbow_from_ngram_iterator',
-      timeit.timeit('for n in cbow_from_ngram_iterator(ngram(text)):' ' pass',
-          setup="from __main__ import ngram, cbow_from_ngram_iterator",
-          number=number),
-      timeit.timeit('[n for n in cbow_from_ngram_iterator(ngram(text))]',
-          setup="from __main__ import ngram, cbow_from_ngram_iterator",
-          number=number)))
 
-   from tabulate import tabulate
-   print(tabulate(sorted(results, key=lambda (k,v,u): u),
-      headers=['method', 'for loop', 'list comprehension']))
+def _consume_cli(subparsers):
+    import sys
+    def function(args):
+        for l in args.input:
+            print(*list(consume(l.split(), n=args.number)))
+
+    help ="""
+    consumes n words from the input.
+    """
+    parser = subparsers.add_parser('consume', help=help)
+    parser.add_argument('-n',
+            '--number',
+            dest='number',
+            default=0,
+            type=int,
+            help='number of words to consume [%(defaults)]')
+    parser.add_argument('input',
+            type=make_word_iterator,
+            default=sys.stdin,
+            help='Input text to consume')
+    parser.set_defaults(func=function)
+
+
+
+def _ngram_cli(subparsers):
+    import sys
+    def function(args):
+        for l in args.input:
+            print(*list(ngram(l.split(), n=args.number)))
+
+    help ="""
+    create ngrams from the input.
+    """
+    parser = subparsers.add_parser('ngram', help=help)
+    parser.add_argument('-n',
+            '--number',
+            dest='number',
+            default=0,
+            type=int,
+            help='number of words to consume [%(defaults)]')
+    parser.add_argument('input',
+            type=make_word_iterator,
+            default=sys.stdin,
+            help='Input text to consume')
+    parser.set_defaults(func=function)
+
+
+
+def _cbow_cli(subparsers):
+    import sys
+    def function(args):
+        for l in args.input:
+            print(*list(cbow2(l.split(), window=args.number)))
+
+    help ="""
+    create cbow from the input.
+    """
+    parser = subparsers.add_parser('cbow', help=help)
+    parser.add_argument('-n',
+            '--number',
+            dest='number',
+            default=0,
+            type=int,
+            help='number of words to consume [%(defaults)]')
+    parser.add_argument('input',
+            type=make_word_iterator,
+            default=sys.stdin,
+            help='Input text to consume')
+    parser.set_defaults(func=function)
+
+
+
+def _main():
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser(prog='ngram')
+    subparsers = parser.add_subparsers(help='sub-command help')
+    _consume_cli(subparsers)
+    _ngram_cli(subparsers)
+    _cbow_cli(subparsers)
+    cmd_args = parser.parse_args()
+    cmd_args.func(cmd_args)
 
 
 
 if __name__ == '__main__':
-    text = """We are about to study the idea of a computational process.absComputational processes are abstract beings that inhabit computers.
-    As they evolve, processes manipulate other abstract things called data.
-    The evolution of a process is directed by a pattern of rules
-    called a program. People create programs to direct processes. In effect,
-    we conjure the spirits of the computer with our spells.""".split()
-
-    for n in ngram(text, 3):
-        print(n)
-
-    import timeit
-    number = 30000
-    method_name = 'ngram'
-    t = timeit.timeit('for n in {}(text):\n pass'.format(method_name),
-            setup="from __main__ import {}, text".format(method_name),
-            number=number)
-    print(t)
-
-    test()
+    _main()
