@@ -1,2 +1,2 @@
-from .cli import _main
-_main()
+from .cli import cli
+cli()
