@@ -1,8 +1,7 @@
 #!/usr/bin/env  python3
 
+import click
 import sys
-
-from argparse import ArgumentParser
 
 from .ngram import (
         cbow2,
@@ -10,90 +9,86 @@ from .ngram import (
         make_word_iterator,
         ngram,
         )
+from typing import (
+        Iterable,
+        )
 
 
 
-def _consume_cli(subparsers):
-    def function(args):
-        for line in args.input:
-            print(*list(consume(line.split(), n=args.number)))
-
-    help ="""
-    consumes n words from the input.
+@click.group
+@click.help_option("-h", "--help")
+def cli():
     """
-    parser = subparsers.add_parser('consume', help=help)
-    parser.add_argument('-n',
-            '--number',
-            dest='number',
-            default=0,
-            type=int,
-            help='number of words to consume [%(defaults)]')
-    parser.add_argument('input',
-            type=make_word_iterator,
-            default=sys.stdin,
-            help='Input text to consume')
-    parser.set_defaults(func=function)
+    blah
+    """
+    pass
 
 
 
-def _ngram_cli(subparsers):
-    def function(args):
-        for line in args.input:
-            print(*list(ngram(line.split(), n=args.number)))
+@cli.command
+@click.option(
+    '-n',
+    '--number',
+    'number',
+    default=0,
+    type=int,
+    help='number of words to consume [%(defaults)]')
+@click.argument('words', type=make_word_iterator, default=sys.stdin)
+def consume(
+        number: int,
+        words: Iterable,
+        ):
+    """
+    Consumes n words from the input.
+    """
+    for line in words:
+        print(*list(consume(line.split(), n=number)))
 
-    help ="""
+
+
+@cli.command
+@click.option(
+    '-n',
+    '--number',
+    'number',
+    default=0,
+    type=int,
+    help='number of words to consume [%(defaults)]')
+@click.argument('words', type=make_word_iterator, default=sys.stdin)
+def ngram(
+        number: int,
+        words: Iterable,
+        ):
+    """
     create ngrams from the input.
     """
-    parser = subparsers.add_parser('ngram', help=help)
-    parser.add_argument('-n',
-            '--number',
-            dest='number',
-            default=0,
-            type=int,
-            help='number of words to consume [%(defaults)]')
-    parser.add_argument('input',
-            type=make_word_iterator,
-            default=sys.stdin,
-            help='Input text to consume')
-    parser.set_defaults(func=function)
+    for line in words:
+        print(*list(ngram(line.split(), n=number)))
 
 
 
-def _cbow_cli(subparsers):
-    def function(args):
-        for line in args.input:
-            print(*list(cbow2(line.split(), window=args.number)))
-
-    help ="""
+@cli.command
+@click.option(
+    '-n',
+    '--number',
+    'number',
+    default=0,
+    type=int,
+    help='number of words to consume [%(defaults)]')
+@click.argument('words', type=make_word_iterator, default=sys.stdin)
+def cbow(
+        number: int,
+        words: Iterable,
+        ):
+    """
     create cbow from the input.
     """
-    parser = subparsers.add_parser('cbow', help=help)
-    parser.add_argument('-n',
-            '--number',
-            dest='number',
-            default=0,
-            type=int,
-            help='number of words to consume [%(defaults)]')
-    parser.add_argument('input',
-            type=make_word_iterator,
-            default=sys.stdin,
-            help='Input text to consume')
-    parser.set_defaults(func=function)
-
-
-
-def _main():
-    parser = ArgumentParser(prog='ngram')
-    subparsers = parser.add_subparsers(help='sub-command help')
-    _consume_cli(subparsers)
-    _ngram_cli(subparsers)
-    _cbow_cli(subparsers)
-    cmd_args = parser.parse_args()
-    cmd_args.func(cmd_args)
+    for line in words:
+        print(*list(cbow2(line.split(), window=number)))
 
 
 
 
 
 if __name__ == '__main__':
-    _main()
+    cli()
