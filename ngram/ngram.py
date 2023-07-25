@@ -10,7 +10,7 @@ from typing import (
 
 
 # CONSUMER
-def consume(iterable: Iterable, n=None):
+def consume(iterable: Iterable, *, n=None):
     """
     Advance the iterator n-steps ahead. If n is none, consume entirely.
     From: https://docs.python.org/2/library/itertools.html#recipes
@@ -28,7 +28,7 @@ def consume(iterable: Iterable, n=None):
 
 
 
-def consume3(iterable: Iterable, n=None):
+def consume3(iterable: Iterable, *, n=None):
     """
     Advance the iterator n-steps ahead. If n is none, consume entirely.
     Returns: iterator
@@ -40,7 +40,7 @@ def consume3(iterable: Iterable, n=None):
 
 
 # NGRAM
-def ngram(iterable: Iterable, n=2):
+def ngram(iterable: Iterable, *, n=2):
     """
     s -> (s0,s1), (s1,s2), (s2, s3), ...
     """
@@ -53,7 +53,7 @@ def ngram(iterable: Iterable, n=2):
 
 
 
-def ngram_consume(iterable: Iterable, n=2):
+def ngram_consume(iterable: Iterable, *, n=2):
     """
     s -> (s0,s1), (s1,s2), (s2, s3), ...
     """
@@ -64,7 +64,7 @@ def ngram_consume(iterable: Iterable, n=2):
 
 
 
-def ngram_generator(words, n=2):
+def ngram_generator(words, *, n=2):
     """
     s -> (s0,s1), (s1,s2), (s2, s3), ...
     """
@@ -74,7 +74,7 @@ def ngram_generator(words, n=2):
 
 
 # CONTINUOUS BAG OF WORDS
-def cbow(iterable: Iterable, window=1):
+def cbow(iterable: Iterable, *, window: int=1):
     """
     s -> ((s0,s2), s1), ((s1,s3), s2), ((s2, s4), s3), ...
     """
@@ -85,7 +85,7 @@ def cbow(iterable: Iterable, window=1):
 
 
 
-def cbow_a(iterable: Iterable, window: int=1):
+def cbow_a(iterable: Iterable, *, window: int=1):
     """
     s -> ((s0,s2), s1), ((s1,s3), s2), ((s2, s4), s3), ...
     """
@@ -96,7 +96,7 @@ def cbow_a(iterable: Iterable, window: int=1):
 
 
 
-def cbow2(iterable: Iterable, window: int=1):
+def cbow2(iterable: Iterable, *, window: int=1):
     """
     s -> ((s0,s2), s1), ((s1,s3), s2), ((s2, s4), s3), ...
     """
@@ -110,7 +110,7 @@ def cbow2(iterable: Iterable, window: int=1):
 
 
 
-def cbow_with_ngram(iterable: Iterable, window: int=1):
+def cbow_with_ngram(iterable: Iterable, *, window: int=1):
     """
     s -> ((s0,s2), s1), ((s1,s3), s2), ((s2, s4), s3), ...
     """
@@ -132,9 +132,6 @@ def cbow_from_ngram_iterator(ngrams: Iterable):
         t = n[window]
         del n[window]
         yield (tuple(n), t)
-
-
-
 
 
 
